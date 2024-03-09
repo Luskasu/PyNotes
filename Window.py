@@ -1,5 +1,6 @@
 import customtkinter
-from os import listdir, path
+from tkinter import filedialog
+from os import listdir
 
 class Window:
     def __init__(self):
@@ -24,20 +25,35 @@ class Window:
         AddButton.pack(anchor ='nw', side = 'left')
 
         #main screen
-        self.selection = customtkinter.CTkFrame(root, width=600, height=400, fg_color='#FFF7D1', corner_radius=0)
-        self.selection.pack(anchor = 'n', fill = 'both', expand = True)
+        self.screen = customtkinter.CTkFrame(root, width=600, height=400, fg_color='#FFF7D1', corner_radius=0)
+        self.screen.pack(anchor = 'n', fill = 'both', expand = True)
+        
 
-        self.showEntries('entries\\')
+        self.ShowEntries('entries\\')
         root.mainloop()
         
         
-    def showEntries(self, path:str):
+    def ShowEntries(self, path:str):
+        self.selection = customtkinter.CTkFrame(self.screen, width=600, height=400, fg_color='#FFF7D1', corner_radius=0)
+        self.selection.pack(anchor = 'n', fill = 'both', expand = True)
         entries = list()
         for i, entry in enumerate(listdir(path)):
-            entries.append(customtkinter.CTkButton(self.selection, height = 60, fg_color='#FFF7D1', text_color= 'black', text=entry,font = ('verdana', 12), hover_color='#F2EAC4', corner_radius=0))
-            #entries[i] = customtkinter.CTkButton(self.selection,width = 50, height = 50, fg_color='white', text=entry)
+            entries.append(customtkinter.CTkButton(self.selection, height = 60, fg_color='#FFF7D1', text_color= 'black', text=entry, font = ('verdana', 12), hover_color='#F2EAC4', corner_radius=0, command = lambda a = entry: self.OpenEntry('entries\\'+a)))
             entries[i].pack(anchor='w', fill = 'x')
-            
+        
+    
+    def OpenEntry(self, fileToOpen):
+        print('opening the file at:  ' + fileToOpen)
+
+        #destroy the selection screen
+        self.selection.destroy()
+
+        #create a the textbox screen
+        textBox = customtkinter.CTkTextbox(self.screen,width=600, height=400, fg_color='#FFF7D1', text_color= 'black', corner_radius=0)
+        textBox.pack(anchor = 'n', fill = 'both', expand = True)
+
+        text = open(fileToOpen).read()
+        textBox.insert("0.0", text)
         
 
 w = Window()
