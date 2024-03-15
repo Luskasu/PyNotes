@@ -2,110 +2,117 @@ import customtkinter
 from tkinter import filedialog
 from os import listdir
 
+lightMode = {
+    "bar":"#FFF2AB", 
+    "bar_hover":"#EEE2A0", 
+    "light":"#FFF7D1", 
+    "light_hover":"#F2EAC4", 
+    "bg":"#F2ECCC"}
+
 class Window:
-    def __init__(self):
+    def __init__(self, width:int = 600, height:int = 400, mode:dict = lightMode):
+        self.mode = mode
         customtkinter.set_appearance_mode('dark')
-        root = customtkinter.CTk('#FFF2AB')
-        root.geometry("600x400+200+200")
+        root = customtkinter.CTk(self.mode["bar"])
+        root.geometry(str(width) + 'x' + str(height))
         root.title('PyNotes')
         root.iconbitmap('Assets\\Icon.ico')   
-        root.grid_rowconfigure(0, weight=1)
-        root.grid_columnconfigure(0, weight=1)
+        root.resizable(True, True)
         self.tabs = list()
-        self.currentTab = 0
+        self.currentTab = None
 
         #UPPER BAR
         self.upperBar = customtkinter.CTkFrame(
-            root, 
-            width = 35, 
-            height = 35, 
-            fg_color='#FFF2AB', 
+            root,
+            fg_color=self.mode["bar"], 
             corner_radius=0)
-        self.upperBar.pack(anchor='n', fill = 'x')
-
-
-        
-        #BOTTOM BAR
-        self.bottomBar = customtkinter.CTkFrame(
-            root, 
-            width = 35, 
-            height = 35, 
-            fg_color='#FFF2AB', 
-            corner_radius=0)
-        self.bottomBar.pack(anchor='s', fill = 'x', side = 'bottom')
+        self.upperBar.pack(side = 'top', fill = 'x')
 
         #ADD
         addButton = customtkinter.CTkButton(
             self.upperBar, 
             width = 35, 
             height = 35, 
-            fg_color='#FFF2AB', 
+            fg_color=self.mode["bar"], 
             text_color='black', 
             text='+', 
             font = ('verdana', 21), 
-            hover_color='#EEE2A0', 
+            hover_color= self.mode["bar_hover"],
             corner_radius=16, 
             command=self.NewTab)
-        addButton.pack(anchor ='nw', side = 'left')
+        addButton.pack(side = 'left')
 
         #SAVE
         saveButton = customtkinter.CTkButton(
             self.upperBar, 
             width = 35, 
             height = 35, 
-            fg_color='#FFF2AB', 
+            fg_color=self.mode["bar"], 
             text_color='black', 
             text='Save Note', 
-            font = ('verdana', 16), 
-            hover_color='#EEE2A0', 
+            font = ('verdana', 14), 
+            hover_color=self.mode["bar_hover"], 
             corner_radius=16, 
             command=self.save)
-        saveButton.pack(anchor ='nw', side = 'left')
+        saveButton.pack(side = 'left')
+
+
+        #selection screen
+        self.selectionScreen = customtkinter.CTkFrame(
+            root,
+            fg_color=self.mode["light"], 
+            corner_radius=0)
+        self.selectionScreen.pack(side = 'left', fill = 'y')
+        self.ShowEntries('entries\\')
 
         #main screen
         self.mainScreen = customtkinter.CTkFrame(
             root, 
-            width=600, 
-            height=400, 
-            fg_color='#FFF7D1', 
+            fg_color=mode["bg"],
             corner_radius=0)
-        self.mainScreen.pack(anchor = 'n', fill = 'both', expand = True)
-        self.ShowEntries('entries\\')
+        self.mainScreen.pack(side = 'left', fill = 'both', expand = True)
+
+        #BOTTOM BAR
+        self.bottomBar = customtkinter.CTkFrame(
+            self.mainScreen, 
+            height = 35, 
+            fg_color=self.mode["bar"], 
+            corner_radius=0)
+        self.bottomBar.pack(side = 'bottom', fill = 'x')
+
         root.mainloop()
 
-
     def ShowEntries(self, path:str):
-        self.selectionScreen = customtkinter.CTkFrame(
-            self.mainScreen,
-            width=600, 
-            height=400, 
-            fg_color='#FFF7D1', 
-            corner_radius=0)
-        self.selectionScreen.pack(anchor = 'n', fill = 'both', expand = True)
         entries = list()
 
         for i, entry in enumerate(listdir(path)):
             entries.append(customtkinter.CTkButton(
                 self.selectionScreen, 
                 height = 60, 
-                fg_color='#FFF7D1', 
-                text_color= 'black', 
-                text=entry, 
+                fg_color= self.mode["light"], 
+                text_color= 'black',
+                text=entry,
                 font = ('verdana', 12), 
-                hover_color='#F2EAC4', 
+                hover_color=self.mode["light_hover"], 
                 corner_radius=0, 
-                command = lambda a = entry: self.NewTab(str(a))))
+                command = lambda a = entry: self.NewTab(a)))
+            
             entries[i].pack(anchor='w', fill = 'x')
     
 
     def NewTab(self, file:any = None):
-        
-        #destroy the selection screen
-        self.selectionScreen.destroy()
+        print(self.tabs)
+        #verify if tab at less exists
+        if len(self.tabs) == 0:
+            print('verificado, é a primeira tab criada')
+        else:
+            print('já tem tabs criadas')
 
         #create a tab instance
-        self.tabs.append(Tab(self.mainScreen, self.bottomBar, file))
+        self.tabs.append(Tab(self, file))
+        
         print(f'DEBUG: criada tab {len(self.tabs)}')
+
         self.currentTab = len(self.tabs) - 1
 
     def save(self):
@@ -114,15 +121,14 @@ class Window:
 
 
 
-class Tab:
-    def __init__(self, main:any, bar:any, stuff:any = None):
-        tabID = int()
-        self.tabName = 'unnamed.txt'
+class Tab():
+    def __init__(self, window, stuff:any = None):
+        self.window = window
         self.textBox = customtkinter.CTkTextbox(
-            main, 
-            width=600, 
-            height=400, 
-            fg_color='#FFF7D1', 
+            self.window.mainScreen, 
+            width= 600,
+            height= 400,
+            fg_color=window.mode["light"], 
             text_color= 'black', 
             corner_radius=0)
         self.textBox.pack(anchor = 'n', fill = 'both', expand = True)
@@ -134,10 +140,10 @@ class Tab:
         
         #tab frame
         self.TabFrame = customtkinter.CTkFrame(
-            bar,
+            self.window.bottomBar,
             width = 70,
             height = 35,
-            fg_color='#FFF2AB',
+            fg_color= window.mode["bar"],
             corner_radius=6)
         self.TabFrame.pack(anchor ='nw', side = 'left', padx = 8)
 
@@ -163,7 +169,7 @@ class Tab:
             text_color='black',
             text= 'x',
             font = ('verdana', 14, 'bold'),
-            hover_color='#EEE2A0',
+            hover_color= window.mode["bar_hover"],
             corner_radius=32,
             command=self.CloseCurrentTab)
         self.closeButton.pack(anchor ='w', side = 'left')
@@ -184,3 +190,5 @@ class Tab:
 
 w = Window()
 
+#  1) verificar se uma entrada ja foi convertida em tab antes de carregar ela como tab
+#  2) pra onde vai o texto?
