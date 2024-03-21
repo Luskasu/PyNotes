@@ -9,7 +9,8 @@ class Window:
     "bar":"#FFF2AB", 
     "bar_hover":"#EEE2A0", 
     "light":"#FFF7D1", 
-    "light_hover":"#F2EAC4", 
+    "light_hover":"#F2EAC4",
+    "selected": "gray",
     "bg":"#F2ECCC",
     "txt":"#F7F0C9"}
 
@@ -119,16 +120,16 @@ class Window:
 
 
     def OpenTab(self, file:str = None):
-        print('DEBUG: OPENTAB' + file)
+        print('DEBUG: OPENTAB ' + file)
         #Null verification
         if file is None:
             return
         #verify if tab at less exists
-        if len(self.tabs) != 0:
+        if self.currentTab is not None:
             #verify if tab alread is opened
             for key in self.tabs:
                 if key == file:
-                    print('DEBUG: você já abriu esse arquivo')
+                    print('DEBUG: você já abriu o arquivo' + file)
                     return 
         #create a tab instance
         self.tabs.update({file:Tab(self, file)})
@@ -137,13 +138,18 @@ class Window:
     
     #this function will load and reload the tabs content
     def SwapTab(self, tab:any, event = None):
-        print('DEBUG: SwapTab')
+        print('DEBUG: SwapTab tab = ' + tab.tabName)
+        #VERIFY IF CURRENTTAB IS NULL 
         if self.currentTab is not None:
+            print('DEBUG: SwapTab current tab no inicio é ' + self.currentTab.tabName)
             self.currentTab.textBox.pack_forget()
-            tab.tabFrame.configure(fg_color= self.mode["bar"])
-            tab.tabTitleBar.configure(fg_color= self.mode["bar"])
-            tab.closeButton.configure(fg_color= self.mode["bar"], hover_color= self.mode["bar_hover"])
+            #cosmetic
+            self.currentTab.tabFrame.configure(fg_color= self.mode["bar"])
+            self.currentTab.tabTitleBar.configure(fg_color= self.mode["bar"])
+            self.currentTab.closeButton.configure(fg_color= self.mode["bar"], hover_color= self.mode["bar_hover"])
+        #VERIFY IF EVENT IS NULL 
         if event is not None:
+            print('DEBUG: SwapTab event is not none')
             tab.tabFrame.configure(fg_color= self.mode["bar_hover"])
             tab.tabTitleBar.configure(fg_color= self.mode["bar_hover"])
             tab.closeButton.configure(fg_color= self.mode["bar_hover"], hover_color= self.mode["light"])
@@ -229,8 +235,11 @@ class Tab():
             self.textBox.pack(anchor = 'n', fill = 'both', expand = True)
         else:
             #define a new current tab
+            print(next(iter(self.window.tabs)))
             self.window.currentTab = self.window.tabs[next(iter(self.window.tabs))]
-            self.window.SwapTab(self.window.currentTab)
+            print('DEBUG CloseTab: nova currentTab é ' + self.window.currentTab.tabName)
+            self.window.SwapTab(self.window.currentTab, "yes")
+            
             
         self.textBox.destroy()
         self.tabFrame.destroy()
@@ -241,6 +250,7 @@ w = Window()
 
 
 #ERROS POR RESOLVER
+# 0 SE FECHAR o primeiro da erro
 #1- o save não tá usando o encoding= 'utf-8'. recomendo refazer a função de save
 #2 o botão add não funciona
 #3 o menu de arquivos é feio. fazer um menu que acesse várias pastas (com subdiretórios) e com menu de contexto (como o do vs code) que permita renomear os arquivos ou ewxcluir eles)
