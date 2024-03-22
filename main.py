@@ -2,9 +2,9 @@ import customtkinter
 from tkinter import filedialog
 from os import listdir, path
 
-
-
 class Window:
+    FOLDER = 'entries\\'
+
     lightMode = {
     "bar":"#FFF2AB", 
     "bar_hover":"#EEE2A0", 
@@ -20,10 +20,11 @@ class Window:
         root = customtkinter.CTk(self.mode["bar"])
         root.geometry(str(width) + 'x' + str(height))
         root.title('PyNotes')
-        root.iconbitmap('Assets\\Icon.ico')   
+        root.iconbitmap('Assets\\Icon.ico')
         root.resizable(True, True)
         self.tabs = dict()
         self.currentTab = None
+        self.entries = list()
 
         #UPPER BAR
         self.upperBar = customtkinter.CTkFrame(
@@ -43,7 +44,7 @@ class Window:
             font = ('verdana', 21), 
             hover_color= self.mode["bar_hover"],
             corner_radius=16, 
-            command=self.NewTab)
+            command=self.NewFileField)
         addButton.pack(side = 'left')
 
         #SAVE
@@ -66,6 +67,7 @@ class Window:
             root,
             fg_color=self.mode["light"], 
             corner_radius=0)
+        self.selectionScreen.pack_propagate(0)
         self.selectionScreen.pack(side = 'left', fill = 'y')
         self.ShowEntries('entries\\')
 
@@ -86,38 +88,54 @@ class Window:
 
         root.mainloop()
 
-    def ShowEntries(self, folder:str):
-        entries = list()
-        if path.isdir(folder):
-            for i, entry in enumerate(listdir(folder)):
-                entries.append(customtkinter.CTkButton(
-                    self.selectionScreen, 
-                    height = 30, 
-                    fg_color= self.mode["light"], 
-                    text_color= 'black',
-                    text=entry,
-                    font = ('verdana', 12), 
-                    hover_color=self.mode["light_hover"], 
-                    corner_radius=0, 
-                    command = lambda a = entry: self.OpenTab(a)))
-                entries[i].pack(anchor='w', fill = 'x')
+    def ShowEntries(self, folder:str = FOLDER):
+        if not path.isdir(folder):
+            return
+        if len(self.entries) != 0:
+            for entry in self.entries:
+                entry.destroy()
+            self.entries.clear()
+
+        for i, entry in enumerate(listdir(folder)):
+            self.entries.append(customtkinter.CTkButton(
+                self.selectionScreen, 
+                height = 30, 
+                fg_color= self.mode["light"], 
+                text_color= 'black',
+                text=entry,
+                font = ('verdana', 12), 
+                hover_color=self.mode["light_hover"], 
+                corner_radius=0, 
+                command = lambda a = entry: self.OpenTab(a)))
+            self.entries[i].pack(anchor='w', fill = 'x')
     
-    def NewTab(self):
-        print('DEBUG: New Tab Chamada')
+    def NewFileField(self):
         #naming a new file
-        frame = customtkinter.CTkFrame(
+        self.frame = customtkinter.CTkFrame(
             self.selectionScreen,
             height = 30, 
             fg_color= self.mode["light"])
-        frame.place(x=0, y=0)
-        name = customtkinter.CTkTextbox(
-            frame,
+        self.frame.pack()
+        self.title = customtkinter.CTkTextbox(
+            self.frame,
             height = 20,
             fg_color= self.mode["bg"],
             text_color='black',
             font = ('verdana', 12))
-        name.pack()
+        self.title.pack() 
+        self.title.bind('<Return>', lambda e: self.newFile())
+        self.ShowEntries()
+        
 
+    def newFile(self):
+        print(f'{str(self.title.get(1.0, 'end')).strip} created')
+        filepath = str(self.title.get(1.0, 'end')).strip()
+        file = open(self.FOLDER + filepath, 'w')
+        file.write('')
+        file.close()
+        self.ShowEntries()
+
+        self.frame.destroy()
 
     def OpenTab(self, file:str = None):
         print('DEBUG: OPENTAB ' + file)
@@ -221,7 +239,6 @@ class Tab():
         self.closeButton.pack(anchor ='w', side = 'left')
 
     def SaveCurrentTab(self):
-        print("DEBUG SaveCurrentTab")
         fileToSave = filedialog.asksaveasfile(
             defaultextension='.txt', 
             filetypes=[('text files', '.txt')])
