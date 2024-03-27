@@ -278,3 +278,4 @@ w = Window()
 # 0 SE FECHAR o ultimo da erro
 #1- o save não tá usando o encoding= 'utf-8'. recomendo refazer a função de save
 #2 o menu de arquivos é feio. fazer um menu que acesse várias pastas (com subdiretórios) e com menu de contexto (como o do vs code) que permita renomear os arquivos ou ewxcluir eles)
+#n
