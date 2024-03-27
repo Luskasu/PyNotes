@@ -14,7 +14,7 @@ class Window:
     "bg":"#F2ECCC",
     "txt":"#F7F0C9"}
 
-    def __init__(self, width:int = 600, height:int = 400, mode:dict = lightMode):
+    def __init__(self, width:int = 900, height:int = 600, mode:dict = lightMode):
         self.mode = mode
         customtkinter.set_appearance_mode('dark')
         root = customtkinter.CTk(self.mode["bar"])
@@ -22,7 +22,7 @@ class Window:
         root.title('PyNotes')
         root.iconbitmap('Assets\\Icon.ico')
         root.resizable(True, True)
-        self.tabs = dict()
+        self.tabs = list()
         self.currentTab = None
         self.entries = list()
 
@@ -58,19 +58,29 @@ class Window:
             font = ('verdana', 14), 
             hover_color=self.mode["bar_hover"], 
             corner_radius=16, 
-            command=self.SaveTab)
+            command= lambda: self.SaveTab(self.currentTab))
         saveButton.pack(side = 'left')
 
-
-        #selection screen
         self.selectionScreen = customtkinter.CTkFrame(
             root,
             fg_color=self.mode["light"], 
             corner_radius=0)
         self.selectionScreen.pack_propagate(0)
         self.selectionScreen.pack(side = 'left', fill = 'y')
-        self.ShowEntries('entries\\')
-
+        
+        self.explorerLabel = customtkinter.CTkLabel(
+            self.selectionScreen,
+            text= 'EXPLORER',
+            text_color='black',
+            font=('verdana', 12),
+            fg_color=self.mode["light"],
+            corner_radius=0
+        )
+        self.explorerLabel.pack(anchor = 'w', padx = 18)
+        
+        self.ShowEntries()
+        
+        
         #main screen
         self.mainScreen = customtkinter.CTkFrame(
             root, 
@@ -88,15 +98,15 @@ class Window:
 
         root.mainloop()
 
-    def ShowEntries(self, folder:str = FOLDER):
-        if not path.isdir(folder):
+    def ShowEntries(self):
+        if not path.isdir(self.FOLDER):
             return
         if len(self.entries) != 0:
             for entry in self.entries:
                 entry.destroy()
             self.entries.clear()
 
-        for i, entry in enumerate(listdir(folder)):
+        for i, entry in enumerate(listdir(self.FOLDER)):
             self.entries.append(customtkinter.CTkButton(
                 self.selectionScreen, 
                 height = 30, 
@@ -110,7 +120,6 @@ class Window:
             self.entries[i].pack(anchor='w', fill = 'x')
     
     def NewFileField(self):
-        #naming a new file
         self.frame = customtkinter.CTkFrame(
             self.selectionScreen,
             height = 30, 
@@ -128,8 +137,9 @@ class Window:
         
 
     def newFile(self):
-        print(f'{str(self.title.get(1.0, 'end')).strip} created')
         filepath = str(self.title.get(1.0, 'end')).strip()
+        if not filepath.endswith('.txt') or not filepath.endswith('.py'):
+            filepath = filepath + '.txt'
         file = open(self.FOLDER + filepath, 'w')
         file.write('')
         file.close()
@@ -137,50 +147,32 @@ class Window:
 
         self.frame.destroy()
 
-    def OpenTab(self, file:str = None):
-        print('DEBUG: OPENTAB ' + file)
-        #Null verification
-        if file is None:
-            return
-        #verify if tab at less exists
+    def OpenTab(self, file:str):
         if self.currentTab is not None:
-            #verify if tab alread is opened
-            for key in self.tabs:
-                if key == file:
+            for tab in self.tabs:
+                if tab.tabName == file:
                     print('DEBUG: você já abriu o arquivo' + file)
-                    return 
-        #create a tab instance
-        self.tabs.update({file:Tab(self, file)})
-        self.SwapTab(self.tabs[file], event='yes')
+                    return
 
-    
-    #this function will load and reload the tabs content
-    def SwapTab(self, tab:any, event = None):
-        print('DEBUG: SwapTab tab = ' + tab.tabName)
-        #VERIFY IF CURRENTTAB IS NULL 
+        self.tabs.append(Tab(self, file))
+        self.swapTab(self.tabs[-1])
+
+    def swapTab(self, tab:any):
         if self.currentTab is not None:
-            print('DEBUG: SwapTab current tab no inicio é ' + self.currentTab.tabName)
             self.currentTab.textBox.pack_forget()
-            #cosmetic
-            self.currentTab.tabFrame.configure(fg_color= self.mode["bar"])
-            self.currentTab.tabTitleBar.configure(fg_color= self.mode["bar"])
-            self.currentTab.closeButton.configure(fg_color= self.mode["bar"], hover_color= self.mode["bar_hover"])
-        #VERIFY IF EVENT IS NULL 
-        if event is not None:
-            print('DEBUG: SwapTab event is not none')
-            tab.tabFrame.configure(fg_color= self.mode["bar_hover"])
-            tab.tabTitleBar.configure(fg_color= self.mode["bar_hover"])
-            tab.closeButton.configure(fg_color= self.mode["bar_hover"], hover_color= self.mode["light"])
+            self.currentTab.turnUnhover()
         tab.textBox.pack(anchor = 'n', fill = 'both', expand = True)
+        tab.turnHover()
+        
         self.currentTab = tab
 
-    def SaveTab(self):
-        print("DEBUG save chamado")
-        self.currentTab.SaveCurrentTab()
+    def SaveTab(self, tab:any):
+        with open(self.FOLDER+tab.tabName, 'w', encoding='utf-8') as file:
+            file.write(tab.getContent())
 
 
 
-class Tab():    
+class Tab():
     def __init__(self, window, file:str = None):
         self.tabName = file
         self.window = window
@@ -207,7 +199,7 @@ class Tab():
         self.tabFrame.pack(anchor ='nw', side = 'left')
         self.tabFrame.bind(
             "<Button-1>", 
-            command = lambda event: self.window.SwapTab(self, event))
+            command = lambda event: self.window.swapTab(self))
 
         #tab title
         self.tabTitleBar = customtkinter.CTkLabel(
@@ -222,7 +214,7 @@ class Tab():
         self.tabTitleBar.pack(anchor ='w', side = 'left', padx = 4)
         self.tabTitleBar.bind(
             "<Button-1>", 
-            command = lambda event: self.window.SwapTab(self, event))
+            command = lambda event: self.window.swapTab(self))
 
         #close button to any bar
         self.closeButton = customtkinter.CTkButton(
@@ -235,39 +227,54 @@ class Tab():
             font = ('verdana', 14, 'bold'),
             hover_color= window.mode["bar_hover"],
             corner_radius=32,
-            command=self.CloseTab)
+            command=self.closeTab)
         self.closeButton.pack(anchor ='w', side = 'left')
-
-    def SaveCurrentTab(self):
-        fileToSave = filedialog.asksaveasfile(
-            defaultextension='.txt', 
-            filetypes=[('text files', '.txt')])
         
-        text = str(self.textBox.get(1.0, 'end'))
-        fileToSave.write(text)
-        fileToSave.close()
+    def getContent(self) -> str:
+        return self.textBox.get(1.0, 'end')
+    
+    def turnHover(self):
+        self.tabFrame.configure(fg_color= self.window.mode["bar_hover"])
+        self.tabTitleBar.configure(fg_color= self.window.mode["bar_hover"])
+        self.closeButton.configure(
+            fg_color= self.window.mode["bar_hover"], 
+            hover_color= self.window.mode["light"])
+    
+    def turnUnhover(self):
+        self.tabFrame.configure(fg_color= self.window.mode["bar"])
+        self.tabTitleBar.configure(fg_color= self.window.mode["bar"])
+        self.closeButton.configure(
+            fg_color= self.window.mode["bar"], 
+            hover_color= self.window.mode["bar_hover"])
 
-    def CloseTab(self):
-        if self is not self.window.currentTab and self.window.currentTab is not None:
-            self.textBox.pack(anchor = 'n', fill = 'both', expand = True)
-        else:
-            #define a new current tab
-            print(next(iter(self.window.tabs)))
-            self.window.currentTab = self.window.tabs[next(iter(self.window.tabs))]
-            print('DEBUG CloseTab: nova currentTab é ' + self.window.currentTab.tabName)
-            self.window.SwapTab(self.window.currentTab, "yes")
-            
-            
+    def closeTab(self):
+        if self is self.window.currentTab:
+            self.closeCurrent()
+            return
         self.textBox.destroy()
         self.tabFrame.destroy()
-
-        del(self.window.tabs[self.tabName])
+        self.window.tabs.remove(self)
+    
+    def closeCurrent(self):
+        self.textBox.destroy()
+        self.tabFrame.destroy()
+        self.window.tabs.remove(self)
+        
+        if len(self.window.tabs) == 0:
+            print('last')
+            self.window.currentTab = None
+            return
+        
+        self.window.currentTab = self.window.tabs[-1]
+        self.window.swapTab(self.window.currentTab)
+        
+    
+        
 
 w = Window()
 
 
 #ERROS POR RESOLVER
-# 0 SE FECHAR o primeiro da erro
+# 0 SE FECHAR o ultimo da erro
 #1- o save não tá usando o encoding= 'utf-8'. recomendo refazer a função de save
-#2 o botão add não funciona
-#3 o menu de arquivos é feio. fazer um menu que acesse várias pastas (com subdiretórios) e com menu de contexto (como o do vs code) que permita renomear os arquivos ou ewxcluir eles)
+#2 o menu de arquivos é feio. fazer um menu que acesse várias pastas (com subdiretórios) e com menu de contexto (como o do vs code) que permita renomear os arquivos ou ewxcluir eles)
