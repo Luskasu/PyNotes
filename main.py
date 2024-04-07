@@ -1,68 +1,36 @@
 import customtkinter
-from tkinter import filedialog
-from os import listdir, path
+from os import listdir, path, remove, rename
+from constants import *
+from tkinter import Menu
+from PIL import Image
 
-class Window:
-    FOLDER = 'entries\\'
-
-    lightMode = {
-    "bar":"#FFF2AB", 
-    "bar_hover":"#EEE2A0", 
-    "light":"#FFF7D1", 
-    "light_hover":"#F2EAC4",
-    "selected": "gray",
-    "bg":"#F2ECCC",
-    "txt":"#F7F0C9"}
-
-    def __init__(self, width:int = 900, height:int = 600, mode:dict = lightMode):
+class Window(customtkinter.CTk):
+    def __init__(self, width:int = 900, height:int = 600, mode:dict = LIGHT_MODE):
+        
         self.mode = mode
         customtkinter.set_appearance_mode('dark')
-        root = customtkinter.CTk(self.mode["bar"])
-        root.geometry(str(width) + 'x' + str(height))
-        root.title('PyNotes')
-        root.iconbitmap('Assets\\Icon.ico')
-        root.resizable(True, True)
+        super().__init__(self.mode["bar"])
+        self.geometry(str(width) + 'x' + str(height))
+        self.title('PyNotes')
+        self.iconbitmap('Assets\\Icon.ico')
+        self.resizable(True, True)
         self.tabs = list()
         self.currentTab = None
         self.entries = list()
 
         #UPPER BAR
-        self.upperBar = customtkinter.CTkFrame(
-            root,
+        self.toolBar = customtkinter.CTkFrame(
+            self,
             fg_color=self.mode["bar"], 
             corner_radius=0)
-        self.upperBar.pack(side = 'top', fill = 'x')
+        self.toolBar.pack(side = 'top', fill = 'x')
 
         #ADD
-        addButton = customtkinter.CTkButton(
-            self.upperBar, 
-            width = 35, 
-            height = 35, 
-            fg_color=self.mode["bar"], 
-            text_color='black', 
-            text='+', 
-            font = ('verdana', 21), 
-            hover_color= self.mode["bar_hover"],
-            corner_radius=16, 
-            command=self.NewFileField)
-        addButton.pack(side = 'left')
-
-        #SAVE
-        saveButton = customtkinter.CTkButton(
-            self.upperBar, 
-            width = 35, 
-            height = 35, 
-            fg_color=self.mode["bar"], 
-            text_color='black', 
-            text='Save Note', 
-            font = ('verdana', 14), 
-            hover_color=self.mode["bar_hover"], 
-            corner_radius=16, 
-            command= lambda: self.SaveTab(self.currentTab))
-        saveButton.pack(side = 'left')
+        addButton = Button(self.toolBar, self.mode, '+', self.newFileField, ('verdana', 18, 'bold'))
+        saveButton = Button(self.toolBar, self.mode, 'Save Note', lambda: self.saveTab(self.currentTab))
 
         self.selectionScreen = customtkinter.CTkFrame(
-            root,
+            self,
             fg_color=self.mode["light"], 
             corner_radius=0)
         self.selectionScreen.pack_propagate(0)
@@ -70,6 +38,7 @@ class Window:
         
         self.explorerLabel = customtkinter.CTkLabel(
             self.selectionScreen,
+            height = 32,
             text= 'EXPLORER',
             text_color='black',
             font=('verdana', 12),
@@ -78,12 +47,20 @@ class Window:
         )
         self.explorerLabel.pack(anchor = 'w', padx = 18)
         
-        self.ShowEntries()
-        
+        self.pathLabel = customtkinter.CTkLabel(
+            self.selectionScreen,
+            height=0,
+            text= FOLDER,
+            text_color='black',
+            font=('verdana', 10),
+            fg_color=self.mode["light"],
+            corner_radius=0
+        )
+        self.pathLabel.pack(anchor = 'w', padx = 18)
         
         #main screen
         self.mainScreen = customtkinter.CTkFrame(
-            root, 
+            self, 
             fg_color=mode["bg"],
             corner_radius=0)
         self.mainScreen.pack(side = 'left', fill = 'both', expand = True)
@@ -95,31 +72,22 @@ class Window:
             fg_color=self.mode["bar"], 
             corner_radius=0)
         self.bottomBar.pack(side = 'bottom', fill = 'x')
-
-        root.mainloop()
-
-    def ShowEntries(self):
-        if not path.isdir(self.FOLDER):
+        
+        self.showEntries()        
+        self.mainloop()
+    
+    def showEntries(self):
+        if not path.isdir(FOLDER):
             return
-        if len(self.entries) != 0:
+        if len(self.entries) > 0:
             for entry in self.entries:
                 entry.destroy()
             self.entries.clear()
+        
+        for entry in listdir(FOLDER):
+            self.entries.append(File(self.selectionScreen, entry, self))
 
-        for i, entry in enumerate(listdir(self.FOLDER)):
-            self.entries.append(customtkinter.CTkButton(
-                self.selectionScreen, 
-                height = 30, 
-                fg_color= self.mode["light"], 
-                text_color= 'black',
-                text=entry,
-                font = ('verdana', 12), 
-                hover_color=self.mode["light_hover"], 
-                corner_radius=0, 
-                command = lambda a = entry: self.OpenTab(a)))
-            self.entries[i].pack(anchor='w', fill = 'x')
-    
-    def NewFileField(self):
+    def newFileField(self):
         self.frame = customtkinter.CTkFrame(
             self.selectionScreen,
             height = 30, 
@@ -133,31 +101,28 @@ class Window:
             font = ('verdana', 12))
         self.title.pack() 
         self.title.bind('<Return>', lambda e: self.newFile())
-        self.ShowEntries()
-        
+        self.showEntries()   
 
     def newFile(self):
         filepath = str(self.title.get(1.0, 'end')).strip()
         if not filepath.endswith('.txt') or not filepath.endswith('.py'):
             filepath = filepath + '.txt'
-        file = open(self.FOLDER + filepath, 'w')
+        file = open(FOLDER + filepath, 'w')
         file.write('')
         file.close()
-        self.ShowEntries()
-
+        self.showEntries()
         self.frame.destroy()
 
     def OpenTab(self, file:str):
         if self.currentTab is not None:
             for tab in self.tabs:
                 if tab.tabName == file:
-                    print('DEBUG: você já abriu o arquivo' + file)
+                    self.swapTab(tab)
                     return
-
         self.tabs.append(Tab(self, file))
         self.swapTab(self.tabs[-1])
-
-    def swapTab(self, tab:any):
+    
+    def swapTab(self, tab:any, event = None):
         if self.currentTab is not None:
             self.currentTab.textBox.pack_forget()
             self.currentTab.turnUnhover()
@@ -166,13 +131,12 @@ class Window:
         
         self.currentTab = tab
 
-    def SaveTab(self, tab:any):
-        with open(self.FOLDER+tab.tabName, 'w', encoding='utf-8') as file:
+    def saveTab(self, tab:any):
+        with open(FOLDER+tab.tabName, 'w', encoding='utf-8') as file:
             file.write(tab.getContent())
+            
 
-
-
-class Tab():
+class Tab:
     def __init__(self, window, file:str = None):
         self.tabName = file
         self.window = window
@@ -180,7 +144,7 @@ class Tab():
             self.window.mainScreen,
             width= 600,
             height= 400,
-            fg_color=window.mode["txt"], 
+            fg_color=window.mode["txt_box"], 
             text_color= 'black', 
             corner_radius=0)
 
@@ -199,7 +163,7 @@ class Tab():
         self.tabFrame.pack(anchor ='nw', side = 'left')
         self.tabFrame.bind(
             "<Button-1>", 
-            command = lambda event: self.window.swapTab(self))
+            command = lambda event: self.window.swapTab(self, event))
 
         #tab title
         self.tabTitleBar = customtkinter.CTkLabel(
@@ -214,7 +178,7 @@ class Tab():
         self.tabTitleBar.pack(anchor ='w', side = 'left', padx = 4)
         self.tabTitleBar.bind(
             "<Button-1>", 
-            command = lambda event: self.window.swapTab(self))
+            command = lambda event: self.window.swapTab(self, event))
 
         #close button to any bar
         self.closeButton = customtkinter.CTkButton(
@@ -258,24 +222,101 @@ class Tab():
     def closeCurrent(self):
         self.textBox.destroy()
         self.tabFrame.destroy()
+        
+        actual = self.window.tabs.index(self.window.currentTab)
+        if actual == len(self.window.tabs) - 1:
+            actual = -1
         self.window.tabs.remove(self)
         
         if len(self.window.tabs) == 0:
-            print('last')
             self.window.currentTab = None
             return
-        
-        self.window.currentTab = self.window.tabs[-1]
+        self.window.currentTab = self.window.tabs[int(actual)]
         self.window.swapTab(self.window.currentTab)
-        
+
+
+class Button(customtkinter.CTkButton):
+    def __init__(self, parent:any, mode:dict, stuff:str, func, font = ('verdana', 14)):
+        self.mode = mode
+        if path.isfile(stuff):
+            self.text = None
+            self.image = customtkinter.CTkImage(Image.open(stuff), size=(30,30))
+        else:
+            self.text = stuff
+            self.image = None
+            
+        super().__init__(
+            parent, 
+            35, 35, 16,
+            text = self.text,
+            image= self.image,
+            fg_color=self.mode["bar"],
+            text_color='black',
+            hover_color=self.mode["bar_hover"],
+            font = font,
+            command = func)
+        self.pack(side = 'left')
+
+
+class File(customtkinter.CTkButton):
+    def __init__(self, parent, entry:str, window):
+        self.fileName = entry
+        self.window = window
+        super().__init__(
+            parent, 
+            height = 30, 
+            fg_color= self.window.mode["light"], 
+            text_color= 'black',
+            text=entry,
+            font = ('verdana', 12), 
+            hover_color=self.window.mode["light_hover"], 
+            corner_radius=0, 
+            command = lambda: self.window.OpenTab(entry)
+        )
+        self.pack(anchor='w', fill = 'x')
+            
     
+        #Context Menu
+        self.context_menu = Menu(self.window, tearoff=0)
+        self.context_menu.add_command(label="Rename", command = self.renameField)
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label="Delete", command = self.deleteFile)
+        self.bind("<Button-3>", self.showMenu)
+
+    def showMenu(self, event):
+        self.context_menu.post(event.x_root, event.y_root)
+    
+    def renameField(self):
+        self.frame = customtkinter.CTkFrame(
+            self.window.selectionScreen,
+            height = 30, 
+            fg_color= self.window.mode["light"])
+        self.frame.pack()
+        self.title = customtkinter.CTkTextbox(
+            self.frame,
+            height = 20,
+            fg_color= self.window.mode["bg"],
+            text_color='black',
+            font = ('verdana', 12))
+        self.title.pack() 
+        self.title.bind('<Return>', lambda a: self.renameFile())  
         
+    def renameFile(self):
+        newName = FOLDER + str(self.title.get(1.0, 'end')).strip()
+        oldName = FOLDER + self.fileName
+        if not newName.endswith('.txt') or not newName.endswith('.py'):
+            newName = newName + '.txt'
+        rename(oldName, newName)
+        
+        self.window.showEntries()
+        self.frame.destroy()
+    
+    def deleteFile(self):
+        remove(FOLDER + self.fileName)
+        for tab in self.window.tabs:
+            if tab.tabName == self.fileName:
+                tab.closeTab()
+        self.window.showEntries()
 
-w = Window()
-
-
-#ERROS POR RESOLVER
-# 0 SE FECHAR o ultimo da erro
-#1- o save não tá usando o encoding= 'utf-8'. recomendo refazer a função de save
-#2 o menu de arquivos é feio. fazer um menu que acesse várias pastas (com subdiretórios) e com menu de contexto (como o do vs code) que permita renomear os arquivos ou ewxcluir eles)
-#n
+if __name__ == '__main__':
+    w = Window()
